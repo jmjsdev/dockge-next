@@ -12,7 +12,9 @@ export interface ImageUpdateInfo {
     remoteTag: string;
     localDigest: string;
     remoteDigest: string;
+    localCreated: string;
     updateAvailable: boolean;
+    updateKind: "tag" | "digest";
 }
 
 interface ParsedImage {
@@ -152,6 +154,22 @@ async function getLocalDigest(fullImageRef: string): Promise<string | null> {
         return null;
     } catch (e) {
         return null;
+    }
+}
+
+/**
+ * Get local image creation date.
+ */
+async function getLocalCreated(fullImageRef: string): Promise<string> {
+    try {
+        const res = await childProcessAsync.spawn("docker", [
+            "image", "inspect", fullImageRef,
+            "--format", "{{.Created}}"
+        ], { encoding: "utf-8" });
+
+        return res.stdout?.toString().trim() || "";
+    } catch (e) {
+        return "";
     }
 }
 
@@ -332,10 +350,10 @@ export class ImageUpdateChecker {
                         const isFloatingTag = !isSemverTag;
 
                         // Mode 1: Pinned semver tag (e.g. v0.32.4, 4.1.0)
-                        // Check if a newer tag exists on the registry
                         if (isSemverTag) {
                             const latestTag = await getLatestTag(parsed.registry, parsed.image, img.tag);
                             if (latestTag) {
+                                const localCreated = await getLocalCreated(fullRef);
                                 stackUpdates.push({
                                     stackName,
                                     service: img.service,
@@ -344,14 +362,15 @@ export class ImageUpdateChecker {
                                     remoteTag: latestTag,
                                     localDigest: "",
                                     remoteDigest: "",
+                                    localCreated,
                                     updateAvailable: true,
+                                    updateKind: "tag",
                                 });
                             }
                             continue;
                         }
 
                         // Mode 2: Floating tag (latest, release, alpine, etc.)
-                        // Compare digests — same tag but new build
                         if (isFloatingTag) {
                             const localDigest = await getLocalDigest(fullRef);
                             if (!localDigest) {
@@ -364,6 +383,7 @@ export class ImageUpdateChecker {
                             }
 
                             if (localDigest !== remoteDigest) {
+                                const localCreated = await getLocalCreated(fullRef);
                                 stackUpdates.push({
                                     stackName,
                                     service: img.service,
@@ -372,7 +392,9 @@ export class ImageUpdateChecker {
                                     remoteTag: img.tag,
                                     localDigest,
                                     remoteDigest,
+                                    localCreated,
                                     updateAvailable: true,
+                                    updateKind: "digest",
                                 });
                             }
                         }

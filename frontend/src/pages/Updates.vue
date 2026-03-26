@@ -56,17 +56,28 @@
                     </span>
                 </div>
 
-                <div v-for="update in stack.updates" :key="update.service" class="update-item ms-4 mb-1">
-                    <span class="service-name me-2">{{ update.service }}</span>
-                    <span class="image-ref">{{ update.imageName }}</span>
-                    <span v-if="update.remoteTag !== update.currentTag" class="version-info ms-2">
-                        <span class="current-version">{{ update.currentTag }}</span>
-                        <span class="arrow mx-1">→</span>
-                        <span class="remote-version">{{ update.remoteTag }}</span>
-                    </span>
-                    <span v-else class="badge update-digest-badge ms-2">
-                        {{ $t("updateAvailable") }}
-                    </span>
+                <div v-for="update in stack.updates" :key="update.service" class="update-item ms-4 mb-2">
+                    <div class="d-flex align-items-center flex-wrap">
+                        <span class="service-name me-2">{{ update.service }}</span>
+                        <span class="image-ref me-2">{{ update.imageName }}:{{ update.currentTag }}</span>
+
+                        <!-- Semver tag update: show version transition -->
+                        <span v-if="update.updateKind === 'tag'" class="version-transition">
+                            <span class="current-version">{{ update.currentTag }}</span>
+                            <span class="arrow mx-1">→</span>
+                            <span class="remote-version">{{ update.remoteTag }}</span>
+                        </span>
+
+                        <!-- Digest update: show short digests -->
+                        <span v-else-if="update.updateKind === 'digest'" class="version-transition">
+                            <span class="current-version" :title="update.localDigest">{{ shortDigest(update.localDigest) }}</span>
+                            <span class="arrow mx-1">→</span>
+                            <span class="remote-version" :title="update.remoteDigest">{{ shortDigest(update.remoteDigest) }}</span>
+                        </span>
+                    </div>
+                    <div v-if="update.localCreated" class="image-date ms-0 mt-1">
+                        {{ $t("lastPulled") }}: {{ formatDate(update.localCreated) }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -106,6 +117,30 @@ export default {
                 return `/compose/${stack.name}/${stack.endpoint}`;
             }
             return `/compose/${stack.name}`;
+        },
+
+        shortDigest(digest) {
+            if (!digest) {
+                return "";
+            }
+            // "sha256:abc123..." → "abc123..."
+            const d = digest.replace("sha256:", "");
+            return d.substring(0, 12);
+        },
+
+        formatDate(isoDate) {
+            if (!isoDate) {
+                return "";
+            }
+            try {
+                return new Date(isoDate).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                });
+            } catch (e) {
+                return isoDate;
+            }
         },
 
         toggleSelect(name) {
@@ -280,6 +315,20 @@ export default {
 .updating-spinner {
     font-size: 14px;
     color: $primary;
+}
+
+.version-transition {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+}
+
+.image-date {
+    font-size: 12px;
+    color: #999;
+
+    .dark & {
+        color: $dark-font-color3;
+    }
 }
 
 .update-digest-badge {

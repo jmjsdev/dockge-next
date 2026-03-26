@@ -148,5 +148,6 @@
     "updatesChecked": "Update check complete",
     "pullAndUpdate": "Pull & Restart",
     "updateCount": "{0} update | {0} updates",
-    "runningOnly": "Running only"
+    "runningOnly": "Running only",
+    "lastPulled": "Pulled"
 }

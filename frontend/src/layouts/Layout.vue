@@ -206,16 +206,13 @@ export default {
 
 .bottom-nav {
     z-index: 1000;
-    position: fixed;
-    bottom: 0;
+    flex-shrink: 0;
     height: calc(60px + env(safe-area-inset-bottom));
     width: 100%;
-    left: 0;
     background-color: #fff;
-    box-shadow: 0 15px 47px 0 rgba(0, 0, 0, 0.05), 0 5px 14px 0 rgba(0, 0, 0, 0.05);
-    text-align: center;
-    white-space: nowrap;
-    padding: 0 10px env(safe-area-inset-bottom);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    display: flex;
+    padding: 0 0 env(safe-area-inset-bottom);
 
     .bottom-nav-item {
         text-align: center;
@@ -271,8 +268,23 @@ main {
     min-height: calc(100vh - 160px);
 
     &.mobile-main {
-        min-height: calc(100vh - 60px);
-        padding-bottom: calc(70px + env(safe-area-inset-bottom));
+        min-height: 0;
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 10px;
+    }
+}
+
+.mobile {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    height: 100vh; // fallback
+    overflow: hidden;
+
+    @supports (height: 100dvh) {
+        height: 100dvh;
     }
 }
 

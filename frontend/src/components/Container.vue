@@ -10,11 +10,12 @@
                     <span class="badge me-1" :class="bgStyle">{{ status }}</span>
                     <span v-if="updateInfo" class="badge me-1 update-badge-container" :title="$t('updateAvailable')">
                         <font-awesome-icon icon="circle-up" />
-                        <template v-if="updateInfo.remoteTag !== updateInfo.currentTag">
+                        <template v-if="updateInfo.updateKind === 'tag'">
                             {{ updateInfo.currentTag }} → {{ updateInfo.remoteTag }}
                         </template>
-                        <template v-else>
-                            {{ $t("updateAvailable") }}
+                        <template v-else-if="updateInfo.updateKind === 'digest'">
+                            {{ updateInfo.localDigest ? updateInfo.localDigest.replace('sha256:', '').substring(0, 10) : '' }}
+                            → {{ updateInfo.remoteDigest ? updateInfo.remoteDigest.replace('sha256:', '').substring(0, 10) : '' }}
                         </template>
                     </span>
 
