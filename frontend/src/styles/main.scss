@@ -693,5 +693,28 @@ code {
     outline: none !important;
 }
 
+// Mobile responsive
+@media (max-width: 768px) {
+    h1 {
+        font-size: 24px;
+    }
+
+    h2 {
+        font-size: 20px;
+    }
+
+    .shadow-box.big-padding {
+        padding: 12px;
+    }
+
+    .btn-group {
+        flex-wrap: wrap;
+    }
+
+    .search-input {
+        max-width: none;
+    }
+}
+
 // Localization
 @import "localization.scss";

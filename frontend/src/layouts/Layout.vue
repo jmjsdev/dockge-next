@@ -84,7 +84,7 @@
             </ul>
         </header>
 
-        <main>
+        <main :class="{ 'mobile-main': $root.isMobile }">
             <div v-if="$root.socketIO.connecting" class="container mt-5">
                 <h4>{{ $t("connecting...") }}</h4>
             </div>
@@ -92,6 +92,26 @@
             <router-view v-if="$root.loggedIn" />
             <Login v-if="! $root.loggedIn && $root.allowLoginDialog" />
         </main>
+
+        <!-- Mobile bottom navigation -->
+        <nav v-if="$root.isMobile && $root.loggedIn" class="bottom-nav">
+            <router-link to="/" class="bottom-nav-item" exact-active-class="active">
+                <div><font-awesome-icon icon="home" /></div>
+                {{ $t("home") }}
+            </router-link>
+            <a class="bottom-nav-item" :class="{ active: $root.showMobileStackList }" @click.prevent="$root.showMobileStackList = !$root.showMobileStackList">
+                <div><font-awesome-icon icon="layer-group" /></div>
+                {{ $t("Stacks") }}
+            </a>
+            <router-link to="/console" class="bottom-nav-item" active-class="active">
+                <div><font-awesome-icon icon="terminal" /></div>
+                {{ $t("console") }}
+            </router-link>
+            <router-link to="/settings/general" class="bottom-nav-item" active-class="active">
+                <div><font-awesome-icon icon="cog" /></div>
+                {{ $t("Settings") }}
+            </router-link>
+        </nav>
     </div>
 </template>
 
@@ -177,7 +197,7 @@ export default {
     white-space: nowrap;
     padding: 0 10px env(safe-area-inset-bottom);
 
-    a {
+    .bottom-nav-item {
         text-align: center;
         width: 25%;
         display: inline-block;
@@ -187,6 +207,7 @@ export default {
         color: #c1c1c1;
         overflow: hidden;
         text-decoration: none;
+        cursor: pointer;
 
         &.router-link-exact-active, &.active {
             color: $primary;
@@ -201,6 +222,11 @@ export default {
 
 main {
     min-height: calc(100vh - 160px);
+
+    &.mobile-main {
+        min-height: calc(100vh - 60px);
+        padding-bottom: calc(70px + env(safe-area-inset-bottom));
+    }
 }
 
 .title {

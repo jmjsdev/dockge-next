@@ -45,6 +45,9 @@ export default defineComponent({
             agentList: {
 
             },
+
+            isMobile: window.innerWidth <= 768,
+            showMobileStackList: false,
         };
     },
     computed: {
@@ -125,8 +128,15 @@ export default defineComponent({
         this.initSocketIO();
     },
     mounted() {
-        return;
-
+        this._onResize = () => {
+            this.isMobile = window.innerWidth <= 768;
+        };
+        window.addEventListener("resize", this._onResize);
+    },
+    beforeUnmount() {
+        if (this._onResize) {
+            window.removeEventListener("resize", this._onResize);
+        }
     },
     methods: {
 

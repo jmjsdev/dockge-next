@@ -154,12 +154,11 @@
                         <h4 class="mb-3">{{ $t("terminal") }}</h4>
                         <Terminal
                             ref="combinedTerminal"
-                            class="mb-3 terminal"
+                            class="mb-3 combined-terminal"
                             :name="combinedTerminalName"
                             :endpoint="endpoint"
                             :rows="combinedTerminalRows"
                             :cols="combinedTerminalCols"
-                            style="height: 315px;"
                         ></Terminal>
                     </div>
                 </div>
@@ -796,5 +795,30 @@ export default {
 .agent-name {
     font-size: 13px;
     color: $dark-font-color3;
+}
+
+.combined-terminal {
+    height: 315px;
+}
+
+@media (max-width: 768px) {
+    .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+
+        .btn {
+            font-size: 13px;
+            padding: 6px 10px;
+        }
+    }
+
+    .terminal {
+        height: 160px;
+    }
+
+    .combined-terminal {
+        height: 200px;
+    }
 }
 </style>

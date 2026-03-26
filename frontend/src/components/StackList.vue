@@ -103,7 +103,13 @@ export default {
          * @returns {object} Style for stack list
          */
         boxStyle() {
-            if (window.innerWidth > 550) {
+            if (this.$root.isMobile) {
+                return {
+                    height: "calc(100vh - 160px)",
+                    position: "relative",
+                    top: "0",
+                };
+            } else if (window.innerWidth > 550) {
                 return {
                     height: `calc(100vh - 160px + ${this.windowTop}px)`,
                 };
@@ -112,7 +118,6 @@ export default {
                     height: "calc(100vh - 160px)",
                 };
             }
-
         },
 
         /**

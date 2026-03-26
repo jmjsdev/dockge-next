@@ -11,6 +11,7 @@
     "console": "Console",
     "registry": "Registry",
     "compose": "Compose",
+    "Stacks": "Stacks",
     "addFirstStackMsg": "Compose your first stack!",
     "stackName": "Stack Name",
     "deployStack": "Deploy",
