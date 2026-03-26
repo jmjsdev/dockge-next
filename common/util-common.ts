@@ -107,7 +107,7 @@ export const COMBINED_TERMINAL_ROWS = 20;
 
 export const ERROR_TYPE_VALIDATION = 1;
 
-export const UPDATE_CHECK_CRON = "0 */30 * * * *";
+export const UPDATE_CHECK_CRON = "0 0 0 * * *";
 export const UPDATE_CHECK_INITIAL_DELAY = 30000;
 
 export const acceptedComposeFileNames = [

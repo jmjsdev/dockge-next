@@ -3,6 +3,8 @@ import childProcessAsync from "promisify-child-process";
 import { DockgeServer } from "./dockge-server";
 import { Stack } from "./stack";
 import semver from "semver";
+import fs from "fs";
+import path from "path";
 
 export interface ImageUpdateInfo {
     stackName: string;
@@ -309,9 +311,56 @@ async function getStackImages(stackPath: string, composeFileName: string): Promi
     }
 }
 
+interface PersistedData {
+    lastChecked: string | null;
+    updates: Record<string, ImageUpdateInfo[]>;
+}
+
+/**
+ * Get the path to the persisted update data file.
+ */
+function getDataPath(server: DockgeServer): string {
+    return path.join(server.config.dataDir, "image-updates.json");
+}
+
 export class ImageUpdateChecker {
     private static checking = false;
     static lastChecked: Date | null = null;
+
+    /**
+     * Load persisted update data from disk.
+     */
+    static load(server: DockgeServer): void {
+        try {
+            const filePath = getDataPath(server);
+            if (fs.existsSync(filePath)) {
+                const raw = fs.readFileSync(filePath, "utf-8");
+                const data: PersistedData = JSON.parse(raw);
+                if (data.lastChecked) {
+                    this.lastChecked = new Date(data.lastChecked);
+                }
+                server.imageUpdates = new Map(Object.entries(data.updates || {}));
+                log.info("update-checker", `Loaded ${server.imageUpdates.size} cached update(s) from disk (last checked: ${data.lastChecked})`);
+            }
+        } catch (e) {
+            log.debug("update-checker", `Failed to load persisted data: ${e}`);
+        }
+    }
+
+    /**
+     * Save update data to disk.
+     */
+    static save(server: DockgeServer): void {
+        try {
+            const data: PersistedData = {
+                lastChecked: this.lastChecked?.toISOString() || null,
+                updates: Object.fromEntries(server.imageUpdates),
+            };
+            fs.writeFileSync(getDataPath(server), JSON.stringify(data, null, 2));
+        } catch (e) {
+            log.debug("update-checker", `Failed to persist data: ${e}`);
+        }
+    }
 
     /**
      * Check all stacks for image updates — streaming mode.
@@ -418,6 +467,7 @@ export class ImageUpdateChecker {
             }
 
             this.lastChecked = new Date();
+            this.save(server);
             log.info("update-checker", `Update check complete. ${server.imageUpdates.size} stack(s) with updates available.`);
 
         } catch (e) {

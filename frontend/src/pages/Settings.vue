@@ -6,7 +6,7 @@
 
         <div class="shadow-box shadow-box-settings">
             <div class="row">
-                <div v-if="showSubMenu" class="settings-menu col-lg-3 col-md-5">
+                <div v-if="showSubMenu" class="settings-menu col-4 col-lg-3 col-md-5">
                     <router-link
                         v-for="(item, key) in subMenus"
                         :key="key"
@@ -18,14 +18,14 @@
                     </router-link>
 
                     <!-- Logout Button -->
-                    <a v-if="$root.isMobile && $root.loggedIn && $root.socket.token !== 'autoLogin'" class="logout" @click.prevent="$root.logout">
+                    <a v-if="$root.isMobile && $root.loggedIn && $root.socketIO.token !== 'autoLogin'" class="logout" @click.prevent="$root.logout">
                         <div class="menu-item">
                             <font-awesome-icon icon="sign-out-alt" />
                             {{ $t("Logout") }}
                         </div>
                     </a>
                 </div>
-                <div class="settings-content col-lg-9 col-md-7">
+                <div class="settings-content col-8 col-lg-9 col-md-7">
                     <div v-if="currentPage" class="settings-content-header">
                         {{ subMenus[currentPage].title }}
                     </div>
@@ -241,5 +241,30 @@ footer {
 
 .logout {
     color: $danger !important;
+}
+
+@media (max-width: 768px) {
+    .shadow-box-settings {
+        padding: 10px;
+    }
+
+    .settings-menu .menu-item {
+        margin: 0.3em;
+        padding: 0.5em 0.6em;
+        font-size: 13px;
+    }
+
+    .settings-content .settings-content-header {
+        font-size: 20px;
+        padding: 10px 0.6em;
+        margin-top: -10px;
+        margin-right: -10px;
+        width: calc(100% + 10px);
+    }
+
+    .settings-content .mx-3 {
+        margin-left: 0.5rem !important;
+        margin-right: 0.5rem !important;
+    }
 }
 </style>

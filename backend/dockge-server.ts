@@ -408,17 +408,22 @@ export class DockgeServer {
 
             checkVersion.startInterval();
 
-            // Image update checker - run periodically
+            // Load cached update data from disk
+            ImageUpdateChecker.load(this);
+
+            // Image update checker - run every 24h
             Cron(UPDATE_CHECK_CRON, {
                 protect: true,
             }, () => {
                 ImageUpdateChecker.checkAllStacks(this);
             });
 
-            // Initial update check after a short delay
-            setTimeout(() => {
-                ImageUpdateChecker.checkAllStacks(this);
-            }, UPDATE_CHECK_INITIAL_DELAY);
+            // Initial check only if no recent data
+            if (!ImageUpdateChecker.lastChecked) {
+                setTimeout(() => {
+                    ImageUpdateChecker.checkAllStacks(this);
+                }, UPDATE_CHECK_INITIAL_DELAY);
+            }
         });
 
         gracefulShutdown(this.httpServer, {
