@@ -65,11 +65,7 @@ export default {
         },
 
         showSubMenu() {
-            if (this.$root.isMobile) {
-                return !this.currentPage;
-            } else {
-                return true;
-            }
+            return true;
         },
 
         subMenus() {
@@ -93,12 +89,6 @@ export default {
         },
     },
 
-    watch: {
-        "$root.isMobile"() {
-            this.loadGeneralPage();
-        }
-    },
-
     mounted() {
         this.loadSettings();
         this.loadGeneralPage();
@@ -111,7 +101,7 @@ export default {
          * For desktop only, on mobile do nothing
          */
         loadGeneralPage() {
-            if (!this.currentPage && !this.$root.isMobile) {
+            if (!this.currentPage) {
                 this.$router.push("/settings/appearance");
             }
         },

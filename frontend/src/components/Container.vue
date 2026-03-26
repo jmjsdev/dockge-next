@@ -8,6 +8,15 @@
                 </div>
                 <div v-if="!isEditMode">
                     <span class="badge me-1" :class="bgStyle">{{ status }}</span>
+                    <span v-if="updateInfo" class="badge me-1 update-badge-container" :title="$t('updateAvailable')">
+                        <font-awesome-icon icon="circle-up" />
+                        <template v-if="updateInfo.remoteTag !== updateInfo.currentTag">
+                            {{ updateInfo.currentTag }} → {{ updateInfo.remoteTag }}
+                        </template>
+                        <template v-else>
+                            {{ $t("updateAvailable") }}
+                        </template>
+                    </span>
 
                     <a v-for="port in (ports ?? envsubstService.ports)" :key="port" :href="parsePort(port).url" target="_blank">
                         <span class="badge me-1 bg-secondary">{{ parsePort(port).display }}</span>
@@ -182,6 +191,11 @@ export default defineComponent({
             return list;
         },
 
+        updateInfo() {
+            const updates = this.stack?.updates || [];
+            return updates.find(u => u.service === this.name || u.imageName === this.envsubstService?.image?.split(":")[0]) || null;
+        },
+
         bgStyle() {
             if (this.status === "running" || this.status === "healthy") {
                 return "bg-primary";
@@ -311,6 +325,20 @@ export default defineComponent({
         width: 100%;
         align-items: center;
         justify-content: end;
+    }
+}
+
+.update-badge-container {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    font-weight: normal;
+    font-size: 0.75rem;
+
+    .dark & {
+        background-color: rgba(248, 113, 113, 0.1);
+        color: #f87171;
+        border-color: rgba(248, 113, 113, 0.3);
     }
 }
 </style>

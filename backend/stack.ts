@@ -78,7 +78,12 @@ export class Stack {
         };
     }
 
+    get composeFileName() : string {
+        return this._composeFileName;
+    }
+
     toSimpleJSON(endpoint : string) : object {
+        const updates = this.server.imageUpdates.get(this.name) || [];
         return {
             name: this.name,
             status: this._status,
@@ -86,6 +91,7 @@ export class Stack {
             isManagedByDockge: this.isManagedByDockge,
             composeFileName: this._composeFileName,
             endpoint,
+            updates,
         };
     }
 

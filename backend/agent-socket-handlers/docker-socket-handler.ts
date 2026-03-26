@@ -3,6 +3,7 @@ import { DockgeServer } from "../dockge-server";
 import { callbackError, callbackResult, checkLogin, DockgeSocket, ValidationError } from "../util-server";
 import { Stack } from "../stack";
 import { AgentSocket } from "../../common/agent-socket";
+import { ImageUpdateChecker } from "../image-update-checker";
 
 export class DockerSocketHandler extends AgentSocketHandler {
     create(socket : DockgeSocket, server : DockgeServer, agentSocket : AgentSocket) {
@@ -13,6 +14,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 checkLogin(socket);
                 const stack = await this.saveStack(server, name, composeYAML, composeENV, isAdd);
                 await stack.deploy(socket);
+                server.imageUpdates.delete(name as string);
                 server.sendStackList();
                 callbackResult({
                     ok: true,
@@ -185,6 +187,10 @@ export class DockerSocketHandler extends AgentSocketHandler {
 
                 const stack = await Stack.getStack(server, stackName);
                 await stack.update(socket);
+
+                // Clear cached update info — image just got pulled
+                server.imageUpdates.delete(stackName as string);
+
                 callbackResult({
                     ok: true,
                     msg: "Updated",
@@ -232,6 +238,22 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 callbackResult({
                     ok: true,
                     serviceStatusList,
+                }, callback);
+            } catch (e) {
+                callbackError(e, callback);
+            }
+        });
+
+        // checkUpdates - force refresh image update check
+        agentSocket.on("checkUpdates", async (callback) => {
+            try {
+                checkLogin(socket);
+                await ImageUpdateChecker.checkAllStacks(server);
+                callbackResult({
+                    ok: true,
+                    msg: "updatesChecked",
+                    msgi18n: true,
+                    lastChecked: ImageUpdateChecker.lastChecked?.toISOString(),
                 }, callback);
             } catch (e) {
                 callbackError(e, callback);

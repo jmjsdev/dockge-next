@@ -28,6 +28,13 @@
                 </li>
 
                 <li v-if="$root.loggedIn" class="nav-item me-2">
+                    <router-link to="/updates" class="nav-link">
+                        <font-awesome-icon icon="circle-up" /> {{ $t("updates") }}
+                        <span v-if="updateCount > 0" class="badge bg-danger ms-1">{{ updateCount }}</span>
+                    </router-link>
+                </li>
+
+                <li v-if="$root.loggedIn" class="nav-item me-2">
                     <router-link to="/console" class="nav-link">
                         <font-awesome-icon icon="terminal" /> {{ $t("console") }}
                     </router-link>
@@ -103,6 +110,13 @@
                 <div><font-awesome-icon icon="layer-group" /></div>
                 {{ $t("Stacks") }}
             </a>
+            <router-link to="/updates" class="bottom-nav-item" active-class="active">
+                <div class="update-icon-wrapper">
+                    <font-awesome-icon icon="circle-up" />
+                    <span v-if="updateCount > 0" class="mobile-update-badge">{{ updateCount }}</span>
+                </div>
+                {{ $t("updates") }}
+            </router-link>
             <router-link to="/console" class="bottom-nav-item" active-class="active">
                 <div><font-awesome-icon icon="terminal" /></div>
                 {{ $t("console") }}
@@ -140,6 +154,12 @@ export default {
             classes[this.$root.theme] = true;
             classes["mobile"] = this.$root.isMobile;
             return classes;
+        },
+
+        updateCount() {
+            return Object.values(this.$root.completeStackList).filter(
+                s => s.updates && s.updates.length > 0
+            ).length;
         },
 
         hasNewVersion() {
@@ -199,15 +219,19 @@ export default {
 
     .bottom-nav-item {
         text-align: center;
-        width: 25%;
-        display: inline-block;
+        width: 20%;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         height: 100%;
-        padding: 8px 10px 0;
-        font-size: 13px;
+        padding: 6px 4px 0;
+        font-size: 11px;
         color: #c1c1c1;
         overflow: hidden;
         text-decoration: none;
         cursor: pointer;
+        line-height: 1.2;
 
         &.router-link-exact-active, &.active {
             color: $primary;
@@ -215,9 +239,32 @@ export default {
         }
 
         div {
-            font-size: 20px;
+            font-size: 18px;
+            margin-bottom: 2px;
         }
     }
+}
+
+.update-icon-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.mobile-update-badge {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    background-color: #dc3545;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 9px;
+    min-width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    line-height: 1;
 }
 
 main {

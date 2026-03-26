@@ -5,6 +5,9 @@
             <span>{{ stackName }}</span>
             <div v-if="$root.agentCount > 1" class="endpoint">{{ endpointDisplay }}</div>
         </div>
+        <span v-if="stack.updates && stack.updates.length > 0" class="update-badge ms-auto" :title="$t('updateAvailable')">
+            <font-awesome-icon icon="circle-up" />
+        </span>
     </router-link>
 </template>
 
@@ -176,6 +179,16 @@ export default {
 
 .dim {
     opacity: 0.5;
+}
+
+.update-badge {
+    font-size: 13px;
+    flex-shrink: 0;
+    color: #dc3545;
+
+    .dark & {
+        color: #f87171;
+    }
 }
 
 </style>

@@ -9,6 +9,7 @@ import Compose from "./pages/Compose.vue";
 import ContainerTerminal from "./pages/ContainerTerminal.vue";
 
 const Settings = () => import("./pages/Settings.vue");
+const Updates = () => import("./pages/Updates.vue");
 
 // Settings - Sub Pages
 import Appearance from "./components/settings/Appearance.vue";
@@ -54,6 +55,10 @@ const routes = [
                                 name: "containerTerminalEndpoint",
                             },
                         ]
+                    },
+                    {
+                        path: "/updates",
+                        component: Updates,
                     },
                     {
                         path: "/console",

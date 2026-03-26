@@ -55,6 +55,11 @@
                 </div>
 
                 <button v-if="isEditMode && !isAdd" class="btn btn-normal" :disabled="processing" @click="discardStack">{{ $t("discardStack") }}</button>
+                <button v-if="!isEditMode && hasUpdates" class="btn btn-danger" :disabled="processing" @click="updateStack">
+                    <font-awesome-icon icon="circle-up" class="me-1" />
+                    {{ $t("pullAndUpdate") }}
+                </button>
+
                 <button v-if="!isEditMode" class="btn btn-danger" :disabled="processing" @click="showDeleteDialog = !showDeleteDialog">
                     <font-awesome-icon icon="trash" class="me-1" />
                     {{ $t("deleteStack") }}
@@ -389,6 +394,10 @@ export default {
 
         active() {
             return this.status === RUNNING;
+        },
+
+        hasUpdates() {
+            return this.globalStack?.updates?.length > 0;
         },
 
         terminalName() {

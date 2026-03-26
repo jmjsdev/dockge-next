@@ -37,6 +37,8 @@ import { AgentSocketHandler } from "./agent-socket-handler";
 import { AgentSocket } from "../common/agent-socket";
 import { ManageAgentSocketHandler } from "./socket-handlers/manage-agent-socket-handler";
 import { Terminal } from "./terminal";
+import { ImageUpdateChecker, ImageUpdateInfo } from "./image-update-checker";
+import { UPDATE_CHECK_CRON, UPDATE_CHECK_INITIAL_DELAY } from "../common/util-common";
 
 export class DockgeServer {
     app : Express;
@@ -44,6 +46,7 @@ export class DockgeServer {
     packageJSON : PackageJson;
     io : socketIO.Server;
     config : Config;
+    imageUpdates : Map<string, ImageUpdateInfo[]> = new Map();
     indexHTML : string = "";
 
     /**
@@ -404,6 +407,18 @@ export class DockgeServer {
             });
 
             checkVersion.startInterval();
+
+            // Image update checker - run periodically
+            Cron(UPDATE_CHECK_CRON, {
+                protect: true,
+            }, () => {
+                ImageUpdateChecker.checkAllStacks(this);
+            });
+
+            // Initial update check after a short delay
+            setTimeout(() => {
+                ImageUpdateChecker.checkAllStacks(this);
+            }, UPDATE_CHECK_INITIAL_DELAY);
         });
 
         gracefulShutdown(this.httpServer, {
