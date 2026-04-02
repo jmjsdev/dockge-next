@@ -66,6 +66,35 @@
                 </button>
             </div>
 
+            <!-- Update Details -->
+            <div v-if="hasUpdates && !isEditMode" class="shadow-box big-padding mb-3 update-details-panel">
+                <h5 class="mb-2">
+                    <font-awesome-icon icon="circle-up" class="me-1 update-icon" />
+                    {{ $t("availableUpdates") }}
+                </h5>
+                <div v-for="update in globalStack.updates" :key="update.service" class="update-detail-item">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <span class="update-service-name">{{ update.service }}</span>
+                        <span class="update-image-name">{{ update.imageName }}</span>
+
+                        <!-- Semver tag update -->
+                        <span v-if="update.updateKind === 'tag'" class="update-version-info">
+                            <span class="update-current-tag">{{ update.currentTag }}</span>
+                            <span class="update-arrow mx-1">→</span>
+                            <span class="update-remote-tag">{{ update.remoteTag }}</span>
+                        </span>
+
+                        <!-- Digest update -->
+                        <span v-else class="update-version-info">
+                            <span class="badge update-digest-label">{{ $t("newDigestAvailable") }}</span>
+                        </span>
+                    </div>
+                    <div v-if="update.localCreated" class="update-pulled-date mt-1">
+                        {{ $t("lastPulled") }}: {{ formatUpdateDate(update.localCreated) }}
+                    </div>
+                </div>
+            </div>
+
             <!-- URLs -->
             <div v-if="urls.length > 0" class="mb-3">
                 <a v-for="(url, index) in urls" :key="index" target="_blank" :href="url.url">
@@ -517,6 +546,21 @@ export default {
 
     },
     methods: {
+        formatUpdateDate(isoDate) {
+            if (!isoDate) {
+                return "";
+            }
+            try {
+                return new Date(isoDate).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                });
+            } catch (e) {
+                return isoDate;
+            }
+        },
+
         startServiceStatusTimeout() {
             clearTimeout(serviceStatusTimeout);
             serviceStatusTimeout = setTimeout(async () => {
@@ -828,6 +872,98 @@ export default {
 
     .combined-terminal {
         height: 200px;
+    }
+}
+
+.update-details-panel {
+    border-left: 3px solid #dc3545;
+
+    .dark & {
+        border-left-color: #f87171;
+    }
+}
+
+.update-icon {
+    color: #dc3545;
+
+    .dark & {
+        color: #f87171;
+    }
+}
+
+.update-detail-item {
+    padding: 8px 0;
+    font-size: 14px;
+
+    & + & {
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+
+        .dark & {
+            border-top-color: rgba(255, 255, 255, 0.08);
+        }
+    }
+}
+
+.update-service-name {
+    font-weight: 600;
+}
+
+.update-image-name {
+    color: #6c757d;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+
+    .dark & {
+        color: $dark-font-color3;
+    }
+}
+
+.update-version-info {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+}
+
+.update-current-tag {
+    color: #6c757d;
+
+    .dark & {
+        color: $dark-font-color3;
+    }
+}
+
+.update-arrow {
+    color: #6c757d;
+}
+
+.update-remote-tag {
+    color: #dc3545;
+    font-weight: 600;
+
+    .dark & {
+        color: #f87171;
+    }
+}
+
+.update-digest-label {
+    font-size: 11px;
+    font-weight: normal;
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+
+    .dark & {
+        background-color: rgba(248, 113, 113, 0.1);
+        color: #f87171;
+        border-color: rgba(248, 113, 113, 0.3);
+    }
+}
+
+.update-pulled-date {
+    font-size: 12px;
+    color: #999;
+
+    .dark & {
+        color: $dark-font-color3;
     }
 }
 </style>

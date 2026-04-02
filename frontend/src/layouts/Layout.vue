@@ -205,12 +205,14 @@ export default {
 }
 
 .bottom-nav {
-    z-index: 1000;
-    flex-shrink: 0;
+    z-index: 1060;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     height: calc(60px + env(safe-area-inset-bottom));
-    width: 100%;
     background-color: #fff;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
     display: flex;
     padding: 0 0 env(safe-area-inset-bottom);
 
@@ -269,22 +271,7 @@ main {
 
     &.mobile-main {
         min-height: 0;
-        flex: 1;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 10px;
-    }
-}
-
-.mobile {
-    display: flex;
-    flex-direction: column;
-    height: 100dvh;
-    height: 100vh; // fallback
-    overflow: hidden;
-
-    @supports (height: 100dvh) {
-        height: 100dvh;
+        padding-bottom: calc(70px + env(safe-area-inset-bottom));
     }
 }
 

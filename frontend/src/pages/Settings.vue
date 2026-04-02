@@ -82,6 +82,9 @@ export default {
                 globalEnv: {
                     title: this.$t("GlobalEnv"),
                 },
+                updates: {
+                    title: this.$t("updates"),
+                },
                 about: {
                     title: this.$t("About"),
                 },
@@ -112,6 +115,9 @@ export default {
                 this.settings = res.data;
                 if (this.settings.checkUpdate === undefined) {
                     this.settings.checkUpdate = true;
+                }
+                if (this.settings.enableUpdateAll === undefined) {
+                    this.settings.enableUpdateAll = false;
                 }
                 this.settingsLoaded = true;
             });
@@ -246,6 +252,7 @@ footer {
 @media (max-width: 768px) {
     .shadow-box-settings {
         padding: 10px;
+        min-height: auto;
     }
 
     .settings-menu .menu-item {

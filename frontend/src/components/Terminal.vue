@@ -99,7 +99,23 @@ export default {
 
         // Bind to a div
         this.terminal.open(this.$refs.terminal);
-        this.terminal.focus();
+
+        if (this.$root.isMobile) {
+            // xterm.js auto-focuses its hidden textarea on open(), which
+            // triggers the on-screen keyboard on Android. Force blur after
+            // open and after every async step that may re-focus (fit, bind, socket data).
+            const blurTextarea = () => {
+                const ta = this.$refs.terminal?.querySelector(".xterm-helper-textarea");
+                if (ta) {
+                    ta.blur();
+                }
+            };
+            blurTextarea();
+            this.$nextTick(blurTextarea);
+            setTimeout(blurTextarea, 150);
+        } else {
+            this.terminal.focus();
+        }
 
         // Add right-click context menu handler for paste
         this.$refs.terminal.addEventListener('contextmenu', this.handleContextMenu);

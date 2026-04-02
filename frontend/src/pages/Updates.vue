@@ -7,7 +7,7 @@
             </h1>
 
             <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
-                <button class="btn btn-normal" :disabled="checking" @click="checkUpdates">
+                <button class="btn btn-normal" :disabled="checking || updating" @click="checkUpdates">
                     <font-awesome-icon icon="sync" :spin="checking" class="me-1" />
                     {{ checking ? $t("checking") : $t("checkUpdates") }}
                 </button>
@@ -17,7 +17,7 @@
                     {{ $t("updateSelected") }} ({{ selectedCount }})
                 </button>
 
-                <button v-if="totalUpdates > 0 && selectedCount === 0" class="btn btn-danger" :disabled="updating" @click="updateAll">
+                <button v-if="enableUpdateAll && totalUpdates > 0 && selectedCount === 0" class="btn btn-danger" :disabled="updating" @click="updateAll">
                     <font-awesome-icon icon="circle-up" class="me-1" />
                     {{ $t("updateAll") }}
                 </button>
@@ -26,6 +26,24 @@
                     <input v-model="runningOnly" class="form-check-input" type="checkbox" />
                     <span class="form-check-label">{{ $t("runningOnly") }}</span>
                 </label>
+            </div>
+
+            <!-- Progress bar during batch update -->
+            <div v-if="updating" class="shadow-box big-padding mb-3 update-progress">
+                <div class="d-flex align-items-center mb-2">
+                    <font-awesome-icon icon="sync" spin class="me-2 updating-spinner" />
+                    <span>{{ $t("updatingProgress", [progressIndex, progressTotal]) }}</span>
+                </div>
+                <div class="progress">
+                    <div
+                        class="progress-bar"
+                        role="progressbar"
+                        :style="{ width: progressPercent + '%' }"
+                        :aria-valuenow="progressIndex"
+                        :aria-valuemin="0"
+                        :aria-valuemax="progressTotal"
+                    ></div>
+                </div>
             </div>
 
             <div v-if="totalUpdates === 0 && !checking" class="shadow-box big-padding text-center no-updates">
@@ -37,7 +55,11 @@
                 v-for="(stack, key) in stacksWithUpdates"
                 :key="key"
                 class="shadow-box big-padding mb-3 update-card"
-                :class="{ 'update-card-selected': selected[stack.name] }"
+                :class="{
+                    'update-card-selected': selected[stack.name],
+                    'update-card-done': stackStatus[stack.name] === 'done',
+                    'update-card-error': stackStatus[stack.name] === 'error',
+                }"
                 @click="toggleSelect(stack.name)"
             >
                 <div class="d-flex align-items-center mb-2">
@@ -45,11 +67,14 @@
                         v-model="selected[stack.name]"
                         type="checkbox"
                         class="form-check-input update-checkbox me-3"
+                        :disabled="updating"
                         @click.stop
                     />
                     <h4 class="mb-0">
                         <router-link :to="stackUrl(stack)" class="stack-link" @click.stop>{{ stack.name }}</router-link>
                         <font-awesome-icon v-if="currentUpdating === stack.name" icon="sync" spin class="ms-2 updating-spinner" />
+                        <font-awesome-icon v-if="stackStatus[stack.name] === 'done'" icon="check" class="ms-2 text-success" />
+                        <font-awesome-icon v-if="stackStatus[stack.name] === 'error'" icon="times" class="ms-2 text-danger" />
                     </h4>
                     <span v-if="stack.endpoint && $root.agentCount > 1" class="ms-2 text-muted small">
                         ({{ stack.endpoint || $t("currentEndpoint") }})
@@ -92,8 +117,11 @@ export default {
             updating: false,
             selected: {},
             runningOnly: true,
-            updateQueue: [],
             currentUpdating: "",
+            enableUpdateAll: false,
+            progressIndex: 0,
+            progressTotal: 0,
+            stackStatus: {},
         };
     },
     computed: {
@@ -110,6 +138,42 @@ export default {
         selectedCount() {
             return Object.values(this.selected).filter(Boolean).length;
         },
+
+        progressPercent() {
+            if (this.progressTotal === 0) {
+                return 0;
+            }
+            return Math.round((this.progressIndex / this.progressTotal) * 100);
+        },
+    },
+    mounted() {
+        this.$root.getSocket().emit("getSettings", (res) => {
+            if (res.data && res.data.enableUpdateAll !== undefined) {
+                this.enableUpdateAll = res.data.enableUpdateAll;
+            }
+        });
+
+        // Listen for backend progress events
+        this.$root.getSocket().on("updateStacksProgress", (data) => {
+            this.progressTotal = data.total;
+
+            if (data.status === "updating") {
+                this.currentUpdating = data.current;
+                this.progressIndex = data.index;
+            } else if (data.status === "done") {
+                this.stackStatus[data.current] = "done";
+                this.progressIndex = data.index + 1;
+            } else if (data.status === "error") {
+                this.stackStatus[data.current] = "error";
+                this.progressIndex = data.index + 1;
+            } else if (data.status === "complete") {
+                this.updating = false;
+                this.currentUpdating = "";
+            }
+        });
+    },
+    unmounted() {
+        this.$root.getSocket().off("updateStacksProgress");
     },
     methods: {
         stackUrl(stack) {
@@ -155,40 +219,32 @@ export default {
             });
         },
 
-        async updateAll() {
-            this.updating = true;
-            this.updateQueue = [ ...this.stacksWithUpdates ];
-            await this.processQueue();
+        updateAll() {
+            const names = this.stacksWithUpdates.map(s => s.name);
+            this.startBatchUpdate(names);
         },
 
-        async updateSelected() {
-            const toUpdate = this.stacksWithUpdates.filter(s => this.selected[s.name]);
-            if (toUpdate.length === 0) {
+        updateSelected() {
+            const names = this.stacksWithUpdates
+                .filter(s => this.selected[s.name])
+                .map(s => s.name);
+            if (names.length === 0) {
                 return;
             }
-            this.updating = true;
-            this.updateQueue = [ ...toUpdate ];
-            await this.processQueue();
+            this.startBatchUpdate(names);
             this.selected = {};
         },
 
-        processQueue() {
-            return new Promise((resolve) => {
-                const next = () => {
-                    if (this.updateQueue.length === 0) {
-                        this.updating = false;
-                        this.currentUpdating = "";
-                        resolve();
-                        return;
-                    }
-                    const stack = this.updateQueue.shift();
-                    this.currentUpdating = stack.name;
-                    this.$root.emitAgent(stack.endpoint || "", "updateStack", stack.name, (res) => {
-                        this.$root.toastRes(res);
-                        next();
-                    });
-                };
-                next();
+        startBatchUpdate(names) {
+            this.updating = true;
+            this.progressIndex = 0;
+            this.progressTotal = names.length;
+            this.stackStatus = {};
+            this.$root.emitAgent("", "updateStacks", names, (res) => {
+                if (!res.ok) {
+                    this.updating = false;
+                    this.$root.toastRes(res);
+                }
             });
         },
     },
@@ -225,6 +281,15 @@ export default {
     }
 }
 
+.update-progress {
+    border-left: 3px solid $primary;
+
+    .progress {
+        height: 6px;
+        border-radius: 3px;
+    }
+}
+
 .update-card {
     cursor: pointer;
     transition: all 0.15s ease-in-out;
@@ -239,6 +304,14 @@ export default {
         background-color: rgba(116, 194, 255, 0.06);
     }
 
+    &.update-card-done {
+        opacity: 0.5;
+    }
+
+    &.update-card-error {
+        border-color: #dc3545;
+    }
+
     .dark & {
         border-color: $dark-border-color;
 
@@ -249,6 +322,10 @@ export default {
         &.update-card-selected {
             border-color: $primary;
             background-color: rgba(116, 194, 255, 0.08);
+        }
+
+        &.update-card-error {
+            border-color: #f87171;
         }
     }
 }

@@ -105,7 +105,7 @@ export default {
         boxStyle() {
             if (this.$root.isMobile) {
                 return {
-                    height: "calc(100vh - 160px)",
+                    height: "100%",
                     position: "relative",
                     top: "0",
                 };

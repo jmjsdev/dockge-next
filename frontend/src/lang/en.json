@@ -149,5 +149,12 @@
     "pullAndUpdate": "Pull & Restart",
     "updateCount": "{0} update | {0} updates",
     "runningOnly": "Running only",
-    "lastPulled": "Pulled"
+    "lastPulled": "Pulled",
+    "availableUpdates": "Available Updates",
+    "currentVersion": "Current",
+    "latestVersion": "Latest",
+    "newDigestAvailable": "New image available",
+    "updatingProgress": "Updating {0} / {1}...",
+    "enableUpdateAll": "Enable \"Update All\" button",
+    "enableUpdateAllDescription": "When disabled, only the \"Update Selected\" button is available on the Updates page, preventing accidental bulk updates."
 }

@@ -214,7 +214,107 @@ async function getRemoteDigest(registry: string, image: string, tag: string): Pr
 }
 
 /**
+ * Count the number of dot-separated numeric segments in a tag.
+ * e.g. "4.1.0" → 3, "v1.2" → 2, "latest" → 0, "93ec6c9" → 0
+ */
+function countVersionSegments(tag: string): number {
+    // Strip known prefixes (v, V, version-, etc.)
+    const stripped = tag.replace(/^[a-zA-Z-]*/, "");
+    if (!stripped) {
+        return 0;
+    }
+    // Match the version-like part: digits separated by dots
+    const match = stripped.match(/^(\d+(?:\.\d+)*)/);
+    if (!match) {
+        return 0;
+    }
+    return match[1].split(".").length;
+}
+
+/**
+ * Check if a tag looks like a real version number, not a git hash or random string.
+ * Requires at least major.minor format (2+ dot-separated segments).
+ */
+function isVersionLikeTag(tag: string): boolean {
+    // Must have at least 2 numeric segments (e.g. 1.2 or 1.2.3)
+    if (countVersionSegments(tag) < 2) {
+        return false;
+    }
+
+    // Reject pure hex strings that look like git hashes (e.g. "93ec6c9", "a1b2c3d4")
+    const stripped = tag.replace(/^[a-zA-Z-]*/, "");
+    if (/^[0-9a-f]{6,40}$/i.test(stripped)) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Parse a tag into a semver object, using strict parsing first then coerce as fallback.
+ * Returns null if the tag is not a valid version.
+ */
+function parseTagSemver(tag: string): semver.SemVer | null {
+    // Try clean + parse first (strict)
+    const cleaned = semver.clean(tag, { loose: true });
+    const parsed = semver.parse(cleaned !== null ? cleaned : tag);
+    if (parsed) {
+        return parsed;
+    }
+    // Fallback to coerce (looser) — only if tag looks like a version
+    if (isVersionLikeTag(tag)) {
+        return semver.coerce(tag);
+    }
+    return null;
+}
+
+/**
+ * Fetch all tags from registry with pagination support.
+ */
+async function fetchAllTags(registry: string, image: string, auth: RegistryAuth): Promise<string[]> {
+    const registryUrl = getRegistryUrl(registry);
+    const allTags: string[] = [];
+    let nextPageUrl: string | null = `${registryUrl}/v2/${image}/tags/list?n=1000`;
+
+    const headers: Record<string, string> = {
+        "Accept": "application/json",
+    };
+
+    if (auth.token) {
+        headers["Authorization"] = `Bearer ${auth.token}`;
+    }
+
+    while (nextPageUrl) {
+        const currentUrl: string = nextPageUrl;
+        nextPageUrl = null;
+
+        const response: Response = await fetch(currentUrl, { headers });
+        if (!response.ok) {
+            break;
+        }
+
+        const data = await response.json() as { tags?: string[] };
+        if (data.tags && data.tags.length > 0) {
+            allTags.push(...data.tags);
+        }
+
+        // Follow pagination via Link header
+        const link: string | null = response.headers.get("link");
+        if (link) {
+            const match: RegExpMatchArray | null = link.match(/<([^>]+)>;\s*rel="next"/);
+            if (match) {
+                const href: string = match[1];
+                nextPageUrl = href.startsWith("/") ? `${registryUrl}${href}` : href;
+            }
+        }
+    }
+
+    return allTags;
+}
+
+/**
  * Fetch available tags from registry and find the latest semver-compatible tag.
+ * Uses WUD-like filtering: prefix matching, segment count matching, and strict semver validation.
  */
 async function getLatestTag(registry: string, image: string, currentTag: string): Promise<string | null> {
     try {
@@ -223,29 +323,13 @@ async function getLatestTag(registry: string, image: string, currentTag: string)
             return null;
         }
 
-        const registryUrl = getRegistryUrl(registry);
-        const url = `${registryUrl}/v2/${image}/tags/list`;
-
-        const headers: Record<string, string> = {
-            "Accept": "application/json",
-        };
-
-        if (auth.token) {
-            headers["Authorization"] = `Bearer ${auth.token}`;
-        }
-
-        const res = await fetch(url, { headers });
-        if (!res.ok) {
+        const allTags = await fetchAllTags(registry, image, auth);
+        if (allTags.length === 0) {
             return null;
         }
 
-        const data = await res.json() as { tags?: string[] };
-        if (!data.tags || data.tags.length === 0) {
-            return null;
-        }
-
-        // If current tag is "latest" or non-semver, we can't determine a version number
-        const currentSemver = semver.coerce(currentTag);
+        // Current tag must be a valid version
+        const currentSemver = parseTagSemver(currentTag);
         if (!currentSemver) {
             return null;
         }
@@ -254,16 +338,42 @@ async function getLatestTag(registry: string, image: string, currentTag: string)
         const prefixMatch = currentTag.match(/^([a-zA-Z-]*)/);
         const prefix = prefixMatch ? prefixMatch[1] : "";
 
-        // Find highest semver tag with same prefix
+        // Count segments in current tag for strict matching (WUD approach)
+        const currentSegments = countVersionSegments(currentTag);
+
+        // Find highest semver tag with same prefix and same segment count
         let highest = currentSemver;
         let highestTag = currentTag;
 
-        for (const tag of data.tags) {
-            if (prefix && !tag.startsWith(prefix)) {
+        for (const tag of allTags) {
+            // Must start with same prefix
+            if (prefix) {
+                if (!tag.startsWith(prefix)) {
+                    continue;
+                }
+            } else {
+                // No prefix → tag must start with a digit
+                if (!/^\d/.test(tag)) {
+                    continue;
+                }
+            }
+
+            // Must have the same number of version segments
+            if (countVersionSegments(tag) !== currentSegments) {
                 continue;
             }
 
-            const tagSemver = semver.coerce(tag);
+            // Must be a valid version-like tag (not a hash, not single number)
+            if (!isVersionLikeTag(tag)) {
+                continue;
+            }
+
+            // Filter out .sig tags
+            if (tag.endsWith(".sig")) {
+                continue;
+            }
+
+            const tagSemver = parseTagSemver(tag);
             if (tagSemver && semver.gt(tagSemver, highest)) {
                 highest = tagSemver;
                 highestTag = tag;
@@ -395,7 +505,7 @@ export class ImageUpdateChecker {
 
                         const fullRef = img.tag ? `${img.repository}:${img.tag}` : img.repository;
                         const parsed = parseImageName(fullRef);
-                        const isSemverTag = semver.coerce(img.tag) !== null;
+                        const isSemverTag = isVersionLikeTag(img.tag) && parseTagSemver(img.tag) !== null;
                         const isFloatingTag = !isSemverTag;
 
                         // Mode 1: Pinned semver tag (e.g. v0.32.4, 4.1.0)

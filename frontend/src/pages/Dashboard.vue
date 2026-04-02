@@ -78,6 +78,7 @@ export default {
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
     background-color: var(--bs-body-bg);
+    bottom: calc(60px + env(safe-area-inset-bottom));
 
     &.show {
         transform: translateX(0);
@@ -86,6 +87,7 @@ export default {
 
 .offcanvas-backdrop {
     z-index: 1040;
+    bottom: calc(60px + env(safe-area-inset-bottom));
 }
 
 .dark .offcanvas {

@@ -202,6 +202,66 @@ export class DockerSocketHandler extends AgentSocketHandler {
             }
         });
 
+        // updateStacks (batch) — backend-driven queue so user can close the browser
+        agentSocket.on("updateStacks", async (stackNames : unknown, callback) => {
+            try {
+                checkLogin(socket);
+
+                if (!Array.isArray(stackNames) || stackNames.some(n => typeof n !== "string")) {
+                    throw new ValidationError("Stack names must be an array of strings");
+                }
+
+                const names = stackNames as string[];
+
+                // Acknowledge immediately — processing continues server-side
+                callbackResult({
+                    ok: true,
+                    msg: "Update queue started",
+                }, callback);
+
+                for (let i = 0; i < names.length; i++) {
+                    const stackName = names[i];
+                    try {
+                        socket.emit("updateStacksProgress", {
+                            current: stackName,
+                            index: i,
+                            total: names.length,
+                            status: "updating",
+                        });
+
+                        const stack = await Stack.getStack(server, stackName);
+                        await stack.update(socket);
+                        server.imageUpdates.delete(stackName);
+
+                        socket.emit("updateStacksProgress", {
+                            current: stackName,
+                            index: i,
+                            total: names.length,
+                            status: "done",
+                        });
+                        server.sendStackList();
+                    } catch (e) {
+                        socket.emit("updateStacksProgress", {
+                            current: stackName,
+                            index: i,
+                            total: names.length,
+                            status: "error",
+                            error: e instanceof Error ? e.message : String(e),
+                        });
+                    }
+                }
+
+                socket.emit("updateStacksProgress", {
+                    current: "",
+                    index: names.length,
+                    total: names.length,
+                    status: "complete",
+                });
+            } catch (e) {
+                callbackError(e, callback);
+            }
+        });
+
         // down stack
         agentSocket.on("downStack", async (stackName : unknown, callback) => {
             try {
