@@ -3,7 +3,6 @@
         <Uptime :stack="stack" :fixed-width="true" class="me-2" />
         <div class="title">
             <span>{{ stackName }}</span>
-            <div v-if="$root.agentCount > 1" class="endpoint">{{ endpointDisplay }}</div>
         </div>
         <span v-if="stack.updates && stack.updates.length > 0" class="update-badge ms-auto" :title="$t('updateAvailable')">
             <font-awesome-icon icon="circle-up" />

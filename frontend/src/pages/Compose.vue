@@ -4,7 +4,7 @@
             <h1 v-if="isAdd" class="mb-3">{{ $t("compose") }}</h1>
             <h1 v-else class="mb-3">
                 <Uptime :stack="globalStack" :pill="true" /> {{ stack.name }}
-                <span v-if="$root.agentCount > 1" class="agent-name">
+                <span v-if="$root.agentCount > 1 && endpoint !== ''" class="agent-name">
                     ({{ endpointDisplay }})
                 </span>
             </h1>
@@ -133,7 +133,7 @@
                                 <label for="name" class="form-label">{{ $t("dockgeAgent") }}</label>
                                 <select v-model="stack.endpoint" class="form-select">
                                     <option v-for="(agent, endpoint) in $root.agentList" :key="endpoint" :value="endpoint" :disabled="$root.agentStatusList[endpoint] != 'online'">
-                                        ({{ $root.agentStatusList[endpoint] }}) {{ (endpoint) ? endpoint : $t("currentEndpoint") }}
+                                        ({{ $root.agentStatusList[endpoint] }}) {{ (agent.name !== '') ? agent.name : agent.url || $t("Current") }}
                                     </option>
                                 </select>
                             </div>
@@ -162,8 +162,11 @@
                             :name="name"
                             :is-edit-mode="isEditMode"
                             :first="name === Object.keys(jsonConfig.services)[0]"
-                            :status="serviceStatusList[name]?.state"
-                            :ports="serviceStatusList[name]?.ports"
+                            :serviceStatus="serviceStatusList[name]"
+                            :dockerStats="dockerStats"
+                            @start-service="startService"
+                            @stop-service="stopService"
+                            @restart-service="restartService"
                         />
                     </div>
 
@@ -311,6 +314,12 @@ const envDefault = "# VARIABLE=value #comment";
 let yamlErrorTimeout = null;
 
 let serviceStatusTimeout = null;
+let dockerStatsTimeout = null;
+let prismjsSymbolDefinition = {
+    "symbol": {
+        pattern: /(?<!\$)\$(\{[^{}]*\}|\w+)/,
+    }
+};
 
 export default {
     components: {
@@ -366,11 +375,13 @@ export default {
 
             },
             serviceStatusList: {},
+            dockerStats: {},
             isEditMode: false,
             submitted: false,
             showDeleteDialog: false,
             newContainerName: "",
             stopServiceStatusTimeout: false,
+            stopDockerStatsTimeout: false,
         };
     },
     computed: {
@@ -541,6 +552,7 @@ export default {
         }
 
         this.requestServiceStatus();
+        this.requestDockerStats();
     },
     unmounted() {
 
@@ -568,6 +580,13 @@ export default {
             }, 5000);
         },
 
+        startDockerStatsTimeout() {
+            clearTimeout(dockerStatsTimeout);
+            dockerStatsTimeout = setTimeout(async () => {
+                this.requestDockerStats();
+            }, 5000);
+        },
+
         requestServiceStatus() {
             // Do not request if it is add mode
             if (this.isAdd) {
@@ -580,6 +599,17 @@ export default {
                 }
                 if (!this.stopServiceStatusTimeout) {
                     this.startServiceStatusTimeout();
+                }
+            });
+        },
+
+        requestDockerStats() {
+            this.$root.emitAgent(this.endpoint, "dockerStats", (res) => {
+                if (res.ok) {
+                    this.dockerStats = res.dockerStats;
+                }
+                if (!this.stopDockerStatsTimeout) {
+                    this.startDockerStatsTimeout();
                 }
             });
         },
@@ -601,7 +631,9 @@ export default {
         exitAction() {
             console.log("exitAction");
             this.stopServiceStatusTimeout = true;
+            this.stopDockerStatsTimeout = true;
             clearTimeout(serviceStatusTimeout);
+            clearTimeout(dockerStatsTimeout);
 
             // Leave Combined Terminal
             console.debug("leaveCombinedTerminal", this.endpoint, this.stack.name);
@@ -829,6 +861,44 @@ export default {
             this.stack.name = this.stack?.name?.toLowerCase();
         },
 
+        startService(serviceName) {
+            this.processing = true;
+
+            this.$root.emitAgent(this.endpoint, "startService", this.stack.name, serviceName, (res) => {
+                this.processing = false;
+                this.$root.toastRes(res);
+
+                if (res.ok) {
+                    this.requestServiceStatus(); // Refresh service status
+                }
+            });
+        },
+
+        stopService(serviceName) {
+            this.processing = true;
+
+            this.$root.emitAgent(this.endpoint, "stopService", this.stack.name, serviceName, (res) => {
+                this.processing = false;
+                this.$root.toastRes(res);
+
+                if (res.ok) {
+                    this.requestServiceStatus(); // Refresh service status
+                }
+            });
+        },
+
+        restartService(serviceName) {
+            this.processing = true;
+
+            this.$root.emitAgent(this.endpoint, "restartService", this.stack.name, serviceName, (res) => {
+                this.processing = false;
+                this.$root.toastRes(res);
+
+                if (res.ok) {
+                    this.requestServiceStatus(); // Refresh service status
+                }
+            });
+        },
     }
 };
 </script>

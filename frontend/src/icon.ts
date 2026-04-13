@@ -38,6 +38,7 @@ import {
     faAward,
     faLink,
     faChevronDown,
+    faChevronUp,
     faSignOutAlt,
     faPen,
     faExternalLinkSquareAlt,
@@ -54,6 +55,8 @@ import {
     faTerminal, faWarehouse, faHome, faRocket,
     faRotate,
     faCloudArrowDown, faArrowsRotate, faLayerGroup, faCircleUp, faSync,
+    faChevronCircleRight,
+    faChevronCircleDown,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -88,6 +91,7 @@ library.add(
     faAward,
     faLink,
     faChevronDown,
+    faChevronUp,
     faSignOutAlt,
     faPen,
     faExternalLinkSquareAlt,
@@ -112,6 +116,8 @@ library.add(
     faLayerGroup,
     faCircleUp,
     faSync,
+    faChevronCircleRight,
+    faChevronCircleDown,
 );
 
 export { FontAwesomeIcon };
